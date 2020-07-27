@@ -1,0 +1,4 @@
+KUBELET_ADDRESS="--address=127.0.0.1"
+KUBELET_HOSTNAME="--hostname-override=127.0.0.1"
+KUBELET_KUBECONFIG=/etc/kubernetes/kubelet.kubeconfig
+KUBELET_ARGS="--cgroup-driver=systemd --fail-swap-on=false"

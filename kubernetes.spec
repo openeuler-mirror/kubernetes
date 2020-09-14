@@ -3,11 +3,11 @@
 
 Name:         kubernetes
 Version:      1.18.6
-Release:      1
+Release:      2
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
-Source0:      kubernetes-1.18.6.tar.gz
+Source0:      https://github.com/kubernetes/kubernetes/archive/v1.18.6.tar.gz
 Source1:      kube-proxy.service
 Source2:      kube-apiserver.service
 Source3:      kube-scheduler.service

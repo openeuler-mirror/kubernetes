@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.18.6
-Release:      2
+Release:      3
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -59,9 +59,6 @@ Kubernetes services for node host.
 %package  kubeadm
 Summary:  Kubernetes tool for standing up clusters
 
-Requires: kubernetes-node = %{version}-%{release}
-Requires: containernetworking-plugins
-
 %description kubeadm
 Kubernetes tool for standing up clusters.
 
@@ -72,6 +69,12 @@ BuildRequires: golang
 
 %description client
 Kubernetes client tools.
+
+%package kubelet
+Summary: Kubernetes node agent
+
+%description kubelet
+Kubernetes node agent.
 
 %package help
 Summary: Help documents for kubernetes
@@ -214,6 +217,12 @@ mv src/k8s.io/kubernetes/LICENSE .
 %{_bindir}/kubectl
 %{_datadir}/bash-completion/completions/kubectl
 
+%files kubelet
+%license LICENSE
+%doc *.md
+%{_bindir}/kubelet
+%{_unitdir}/kubelet.service
+
 %pre master
 getent group kube >/dev/null || groupadd -r kube
 getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
@@ -243,5 +252,8 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Fri Sep 18 2020 xiadanni <xiadanni1@huawei.com> - 1.18.6-3
+- Add kubelet package
+
 * Sat Jul 25 2020 xiadanni <xiadanni1@huawei.com> - 1.18.6-1
 - Package init

@@ -2,12 +2,12 @@
 %global _buildshell  /bin/bash
 
 Name:         kubernetes
-Version:      1.18.6
-Release:      3
+Version:      1.20.2
+Release:      1
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
-Source0:      https://github.com/kubernetes/kubernetes/archive/v1.18.6.tar.gz
+Source0:      https://github.com/kubernetes/kubernetes/archive/v1.20.2.tar.gz
 Source1:      kube-proxy.service
 Source2:      kube-apiserver.service
 Source3:      kube-scheduler.service
@@ -83,7 +83,7 @@ Summary: Help documents for kubernetes
 Help documents for kubernetes.
 
 %prep
-%setup -q -n kubernetes-1.18.6
+%setup -q -n kubernetes-1.20.2
 mkdir -p src/k8s.io/kubernetes
 mv $(ls | grep -v "^src$") src/k8s.io/kubernetes/.
 
@@ -252,6 +252,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Fri Jan 20 2021 lixiang <lixiang172@huawei.com> - 1.20.2-1
+- Bump version to v1.20.2
+
 * Fri Sep 18 2020 xiadanni <xiadanni1@huawei.com> - 1.18.6-3
 - Add kubelet package
 

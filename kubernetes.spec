@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      1
+Release:      2
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -23,6 +23,8 @@ Source12:     env-scheduler
 Source13:     kubernetes-accounting.conf
 Source14:     kubeadm.conf
 Source15:     kubernetes.conf
+
+Patch6000: 0001-kubelet-support-exec-websocket-protocol.patch
 
 %description
 Container cluster management.
@@ -83,7 +85,7 @@ Summary: Help documents for kubernetes
 Help documents for kubernetes.
 
 %prep
-%setup -q -n kubernetes-1.20.2
+%autosetup -n kubernetes-1.20.2  -Sgit -p1
 mkdir -p src/k8s.io/kubernetes
 mv $(ls | grep -v "^src$") src/k8s.io/kubernetes/.
 
@@ -252,6 +254,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Thu Feb 2 2021 gaohuatao <gaohuatao@huawei.com> - 1.20.2-2
+- Add kubelet support ws
+
 * Fri Jan 20 2021 lixiang <lixiang172@huawei.com> - 1.20.2-1
 - Bump version to v1.20.2
 

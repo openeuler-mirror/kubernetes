@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      2
+Release:      3
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -32,7 +32,7 @@ Container cluster management.
 %package master
 Summary: Kubernetes services for master host
 
-BuildRequires: golang systemd rsync go-md2man
+BuildRequires: golang systemd rsync
 
 Requires(pre): shadow-utils
 Requires: kubernetes-client = %{version}-%{release}
@@ -46,7 +46,7 @@ Kubernetes services for master host.
 %package node
 Summary: Kubernetes services for node host
 
-BuildRequires: golang systemd rsync go-md2man
+BuildRequires: golang systemd rsync
 
 Requires(pre): shadow-utils
 Requires:      docker conntrack-tools socat
@@ -254,6 +254,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* The Feb 09 2021 lixiang <lixiang172@huawei.com> - 1.20.2-3
+- Remove go-md2man build require since it's no longer provided
+
 * Thu Feb 2 2021 gaohuatao <gaohuatao@huawei.com> - 1.20.2-2
 - Add kubelet support ws
 

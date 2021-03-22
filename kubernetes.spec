@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      3
+Release:      4
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -25,6 +25,7 @@ Source14:     kubeadm.conf
 Source15:     kubernetes.conf
 
 Patch6000: 0001-kubelet-support-exec-websocket-protocol.patch
+Patch6001: 0002-fix-compile-options.patch
 
 %description
 Container cluster management.
@@ -95,6 +96,8 @@ export KUBE_GIT_TREE_STATE="clean"
 export KUBE_GIT_COMMIT=%{commit}
 export KUBE_GIT_VERSION=v{version}
 export KUBE_EXTRA_GOPATH=$(pwd)/Godeps/_workspace
+export CGO_CFLAGS="-fstack-protector-strong -fPIE -D_FORTIFY_SOURCE=2 -O2"
+export CGO_LDFLAGS="-Wl,-z,relro,-z,now -Wl,-z,noexecstack -pie"
 
 make WHAT="cmd/kube-proxy"
 make WHAT="cmd/kube-apiserver"
@@ -254,6 +257,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* The Mar 23 2021 wangfengtu <wangfengtu@huawei.com> - 1.20.2-4
+- Fix compile options
+
 * The Feb 09 2021 lixiang <lixiang172@huawei.com> - 1.20.2-3
 - Remove go-md2man build require since it's no longer provided
 

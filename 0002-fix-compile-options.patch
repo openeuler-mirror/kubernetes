@@ -1,0 +1,42 @@
+From 64a21ff088bc4271f596cd1e622d50293eb9566a Mon Sep 17 00:00:00 2001
+From: WangFengTu <wangfengtu@huawei.com>
+Date: Mon, 22 Mar 2021 14:31:00 +0800
+Subject: [PATCH] fix compile options
+
+Signed-off-by: WangFengTu <wangfengtu@huawei.com>
+---
+ hack/lib/golang.sh | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/hack/lib/golang.sh b/hack/lib/golang.sh
+index bef1d837..6d467a8e 100755
+--- a/hack/lib/golang.sh
++++ b/hack/lib/golang.sh
+@@ -701,6 +701,7 @@ kube::golang::build_binaries_for_platform() {
+       -installsuffix static
+       ${goflags:+"${goflags[@]}"}
+       -gcflags "${gogcflags:-}"
++      -buildmode=pie
+       -asmflags "${goasmflags:-}"
+       -ldflags "${goldflags:-}"
+       -tags "${gotags:-}"
+@@ -712,6 +713,7 @@ kube::golang::build_binaries_for_platform() {
+     build_args=(
+       ${goflags:+"${goflags[@]}"}
+       -gcflags "${gogcflags:-}"
++      -buildmode=pie
+       -asmflags "${goasmflags:-}"
+       -ldflags "${goldflags:-}"
+       -tags "${gotags:-}"
+@@ -787,7 +789,7 @@ kube::golang::build_binaries() {
+     # Disable SC2153 for this, as it will throw a warning that the local
+     # variable goldflags will exist, and it suggest changing it to this.
+     # shellcheck disable=SC2153
+-    goldflags="${GOLDFLAGS=-s -w -buildid=} $(kube::version::ldflags)"
++    goldflags="${GOLDFLAGS=-s -w -buildid=} $(kube::version::ldflags) -linkmode=external"
+     goasmflags="-trimpath=${KUBE_ROOT}"
+     gogcflags="${GOGCFLAGS:-} -trimpath=${KUBE_ROOT}"
+ 
+-- 
+2.25.1
+

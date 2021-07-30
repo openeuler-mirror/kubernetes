@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      4
+Release:      5
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -86,7 +86,7 @@ Summary: Help documents for kubernetes
 Help documents for kubernetes.
 
 %prep
-%autosetup -n kubernetes-1.20.2  -Sgit -p1
+%autosetup -n kubernetes-1.20.2 -p1
 mkdir -p src/k8s.io/kubernetes
 mv $(ls | grep -v "^src$") src/k8s.io/kubernetes/.
 
@@ -257,6 +257,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Fri Jul 30 2021 chenyanpanHW <chenyanpan@huawei.com> - 1.20.2-5
+- DESC: delete -Sgit from %autosetup
+
 * The Mar 23 2021 wangfengtu <wangfengtu@huawei.com> - 1.20.2-4
 - Fix compile options
 

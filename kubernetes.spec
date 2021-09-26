@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      4
+Release:      5
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -26,6 +26,8 @@ Source15:     kubernetes.conf
 
 Patch6000: 0001-kubelet-support-exec-websocket-protocol.patch
 Patch6001: 0002-fix-compile-options.patch
+Patch6002: 0003-fix-CVE-2021-25735.patch
+Patch6003: 0004-fix-CVE-2021-25737.patch
 
 %description
 Container cluster management.
@@ -257,6 +259,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Fri Sep 24 2021 leizhongkai<leizhongkai@huawei.com> - 1.20.2-5
+- DESC: fix CVE-2021-25735 and CVE-2021-25737
+
 * The Mar 23 2021 wangfengtu <wangfengtu@huawei.com> - 1.20.2-4
 - Fix compile options
 

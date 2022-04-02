@@ -1,0 +1,155 @@
+From f85327e8e47e14d58e358bdbb6e11c778f89fd45 Mon Sep 17 00:00:00 2001
+From: emmmer <yjhdandan@163.com>
+Date: Tue, 29 Mar 2022 12:29:20 +0800
+Subject: [PATCH 2/2] add arch riscv64
+
+---
+ build/common.sh                                        | 1 +
+ cluster/gce/upgrade.sh                                 | 4 ++++
+ hack/lib/golang.sh                                     | 8 ++++++++
+ hack/lib/util.sh                                       | 5 ++++-
+ hack/local-up-cluster.sh                               | 5 ++++-
+ test/images/image-util.sh                              | 2 +-
+ vendor/github.com/prometheus/procfs/cpuinfo_riscv64.go | 3 +++
+ 7 files changed, 25 insertions(+), 3 deletions(-)
+ create mode 100644 vendor/github.com/prometheus/procfs/cpuinfo_riscv64.go
+
+diff --git a/build/common.sh b/build/common.sh
+index a7a84b6e..a139ea62 100755
+--- a/build/common.sh
++++ b/build/common.sh
+@@ -504,6 +504,7 @@ function kube::build::ensure_data_container() {
+       --volume /usr/local/go/pkg/linux_arm_cgo
+       --volume /usr/local/go/pkg/linux_arm64_cgo
+       --volume /usr/local/go/pkg/linux_ppc64le_cgo
++      --volume /usr/local/go/pkg/linux_riscv64_cgo
+       --volume /usr/local/go/pkg/darwin_amd64_cgo
+       --volume /usr/local/go/pkg/darwin_386_cgo
+       --volume /usr/local/go/pkg/windows_amd64_cgo
+diff --git a/cluster/gce/upgrade.sh b/cluster/gce/upgrade.sh
+index 067d4ca2..7a4efc4c 100755
+--- a/cluster/gce/upgrade.sh
++++ b/cluster/gce/upgrade.sh
+@@ -507,6 +507,10 @@ function update-coredns-config() {
+         host_arch=arm
+         corefile_tool_SHA="b5d83f5e29a2900cc345de8e7b5b25c4e5534e57d61bf52395343d76e64026e3"
+         ;;
++      riscv64*)
++        host_arch=riscv64
++        corefile_tool_SHA=""
++        ;;
+       s390x*)
+         host_arch=s390x
+         corefile_tool_SHA="29754c9966f5215260562eed1db1017e86462dbaba1c0ee9801f0f9cdae3bd2f"
+diff --git a/hack/lib/golang.sh b/hack/lib/golang.sh
+index bef1d837..16f28397 100755
+--- a/hack/lib/golang.sh
++++ b/hack/lib/golang.sh
+@@ -26,6 +26,7 @@ readonly KUBE_SUPPORTED_SERVER_PLATFORMS=(
+   linux/arm
+   linux/arm64
+   linux/s390x
++  linux/riscv64
+   linux/ppc64le
+ )
+ 
+@@ -36,6 +37,7 @@ readonly KUBE_SUPPORTED_NODE_PLATFORMS=(
+   linux/arm64
+   linux/s390x
+   linux/ppc64le
++  linux/riscv64
+   windows/amd64
+ )
+ 
+@@ -48,6 +50,7 @@ readonly KUBE_SUPPORTED_CLIENT_PLATFORMS=(
+   linux/arm64
+   linux/s390x
+   linux/ppc64le
++  linux/riscv64
+   darwin/amd64
+   windows/amd64
+   windows/386
+@@ -61,6 +64,7 @@ readonly KUBE_SUPPORTED_TEST_PLATFORMS=(
+   linux/arm64
+   linux/s390x
+   linux/ppc64le
++  linux/riscv64
+   darwin/amd64
+   windows/amd64
+ )
+@@ -406,6 +410,10 @@ kube::golang::set_platform_envs() {
+         export CGO_ENABLED=1
+         export CC=${KUBE_LINUX_ARM64_CC:-aarch64-linux-gnu-gcc}
+         ;;
++      "linux/riscv64")
++        export CGO_ENABLED=1
++        export CC=${KUBE_LINUX_RISCV64_CC:-riscv64-linux-gnu-gcc}
++        ;;
+       "linux/ppc64le")
+         export CGO_ENABLED=1
+         export CC=${KUBE_LINUX_PPC64LE_CC:-powerpc64le-linux-gnu-gcc}
+diff --git a/hack/lib/util.sh b/hack/lib/util.sh
+index 4893e632..1f31376e 100755
+--- a/hack/lib/util.sh
++++ b/hack/lib/util.sh
+@@ -182,11 +182,14 @@ kube::util::host_arch() {
+     s390x*)
+       host_arch=s390x
+       ;;
++    riscv64*)
++      host_arch=riscv64
++      ;;
+     ppc64le*)
+       host_arch=ppc64le
+       ;;
+     *)
+-      kube::log::error "Unsupported host arch. Must be x86_64, 386, arm, arm64, s390x or ppc64le."
++      kube::log::error "Unsupported host arch. Must be x86_64, 386, arm, arm64, riscv64, s390x or ppc64le."
+       exit 1
+       ;;
+   esac
+diff --git a/hack/local-up-cluster.sh b/hack/local-up-cluster.sh
+index f1296aa2..3faf6e89 100755
+--- a/hack/local-up-cluster.sh
++++ b/hack/local-up-cluster.sh
+@@ -324,11 +324,14 @@ function detect_binary {
+       s390x*)
+         host_arch=s390x
+         ;;
++      riscv64*)
++        host_arch=riscv64
++        ;;
+       ppc64le*)
+         host_arch=ppc64le
+         ;;
+       *)
+-        echo "Unsupported host arch. Must be x86_64, 386, arm, arm64, s390x or ppc64le." >&2
++        echo "Unsupported host arch. Must be x86_64, 386, arm, arm64, riscv64, s390x or ppc64le." >&2
+         exit 1
+         ;;
+     esac
+diff --git a/test/images/image-util.sh b/test/images/image-util.sh
+index e479952c..e8896a6b 100755
+--- a/test/images/image-util.sh
++++ b/test/images/image-util.sh
+@@ -31,7 +31,7 @@ source "${KUBE_ROOT}/hack/lib/logging.sh"
+ source "${KUBE_ROOT}/hack/lib/util.sh"
+ 
+ # Mapping of go ARCH to actual architectures shipped part of multiarch/qemu-user-static project
+-declare -A QEMUARCHS=( ["amd64"]="x86_64" ["arm"]="arm" ["arm64"]="aarch64" ["ppc64le"]="ppc64le" ["s390x"]="s390x" )
++declare -A QEMUARCHS=( ["amd64"]="x86_64" ["arm"]="arm" ["arm64"]="aarch64" ["ppc64le"]="ppc64le" ["riscv64"]="riscv64" ["s390x"]="s390x" )
+ 
+ windows_os_versions=(1809 1903 1909 2004)
+ declare -A WINDOWS_OS_VERSIONS_MAP
+diff --git a/vendor/github.com/prometheus/procfs/cpuinfo_riscv64.go b/vendor/github.com/prometheus/procfs/cpuinfo_riscv64.go
+new file mode 100644
+index 00000000..d67e3a6b
+--- /dev/null
++++ b/vendor/github.com/prometheus/procfs/cpuinfo_riscv64.go
+@@ -0,0 +1,3 @@
++package procfs
++
++var parseCPUInfo = parseCPUInfoRISCV
+-- 
+2.30.1 (Apple Git-130)
+

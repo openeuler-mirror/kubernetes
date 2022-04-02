@@ -29,6 +29,7 @@ Patch6001: 0002-fix-compile-options.patch
 Patch6002: 0003-fix-CVE-2021-25735.patch
 Patch6003: 0004-fix-CVE-2021-25737.patch
 Patch6004: 0005-fix-CVE-2021-25741.patch
+Patch6005: 0006-support-riscv64.patch
 
 %description
 Container cluster management.
@@ -36,7 +37,7 @@ Container cluster management.
 %package master
 Summary: Kubernetes services for master host
 
-BuildRequires: golang systemd rsync
+BuildRequires: golang >= 1.17 systemd rsync
 
 Requires(pre): shadow-utils
 Requires: kubernetes-client = %{version}-%{release}
@@ -50,7 +51,7 @@ Kubernetes services for master host.
 %package node
 Summary: Kubernetes services for node host
 
-BuildRequires: golang systemd rsync
+BuildRequires: golang >=1.17 systemd rsync
 
 Requires(pre): shadow-utils
 Requires:      docker conntrack-tools socat
@@ -71,7 +72,7 @@ Kubernetes tool for standing up clusters.
 %package client
 Summary: Kubernetes client tools
 
-BuildRequires: golang
+BuildRequires: golang >= 1.17
 
 %description client
 Kubernetes client tools.
@@ -100,7 +101,13 @@ export KUBE_GIT_COMMIT=%{commit}
 export KUBE_GIT_VERSION=v{version}
 export KUBE_EXTRA_GOPATH=$(pwd)/Godeps/_workspace
 export CGO_CFLAGS="-fstack-protector-strong -fPIE -D_FORTIFY_SOURCE=2 -O2"
+
+%ifarch riscv64
+export CGO_ENABLE="0"
+export CGO_LDFLAGS="-Wl,-z,noexecstack -pie"
+%else
 export CGO_LDFLAGS="-Wl,-z,relro,-z,now -Wl,-z,noexecstack -pie"
+%endif
 
 make WHAT="cmd/kube-proxy"
 make WHAT="cmd/kube-apiserver"
@@ -260,6 +267,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Sat Apr 02 2022 yangjinghua <yjhdandan@163.com> - 1.20.2-8
+- Add riscv64 architecture support
+
 * Wed Mar 02 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-7
 - DESC: fix CVE-2021-25741
 

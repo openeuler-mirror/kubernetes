@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      7
+Release:      8
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -51,7 +51,7 @@ Kubernetes services for master host.
 %package node
 Summary: Kubernetes services for node host
 
-BuildRequires: golang >=1.17 systemd rsync
+BuildRequires: golang >= 1.17 systemd rsync
 
 Requires(pre): shadow-utils
 Requires:      docker conntrack-tools socat

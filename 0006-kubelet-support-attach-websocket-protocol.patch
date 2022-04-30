@@ -1,0 +1,63 @@
+From 460bb849ad71236890c2c3fa7757a0cdbfda2c2b Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Sat, 19 Mar 2022 16:23:01 +0800
+Subject: [PATCH] kubelet support attach websocket protocol
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ pkg/kubelet/server/server.go | 22 ++++++++++++++++++----
+ 1 file changed, 18 insertions(+), 4 deletions(-)
+
+diff --git a/pkg/kubelet/server/server.go b/pkg/kubelet/server/server.go
+index 1d19fed6..0cf69b5f 100644
+--- a/pkg/kubelet/server/server.go
++++ b/pkg/kubelet/server/server.go
+@@ -757,27 +757,41 @@ func proxyStream(w http.ResponseWriter, r *http.Request, url *url.URL) {
+ 
+ // getAttach handles requests to attach to a container.
+ func (s *Server) getAttach(request *restful.Request, response *restful.Response) {
+-	params := getExecRequestParams(request)
+ 	streamOpts, err := remotecommandserver.NewOptions(request.Request)
+ 	if err != nil {
+ 		utilruntime.HandleError(err)
+ 		response.WriteError(http.StatusBadRequest, err)
+ 		return
+ 	}
++
++	url, err := s.getAttachUrl(request, response, streamOpts)
++	if err != nil {
++		klog.Errorf("failed to get backend url %v", err)
++		return
++	}
++	if url.Scheme == "ws" || url.Scheme == "wss" {
++		remotecommandserver.ProxyToWebSocket(response.ResponseWriter, request.Request, url, streamOpts)
++	} else {
++		proxyStream(response.ResponseWriter, request.Request, url)
++	}
++}
++
++func (s *Server) getAttachUrl(request *restful.Request, response *restful.Response, streamOpts *remotecommandserver.Options) (*url.URL, error) {
++	params := getExecRequestParams(request)
+ 	pod, ok := s.host.GetPodByName(params.podNamespace, params.podName)
+ 	if !ok {
+ 		response.WriteError(http.StatusNotFound, fmt.Errorf("pod does not exist"))
+-		return
++		return nil, fmt.Errorf("pod not found")
+ 	}
+ 
+ 	podFullName := kubecontainer.GetPodFullName(pod)
+ 	url, err := s.host.GetAttach(podFullName, params.podUID, params.containerName, *streamOpts)
+ 	if err != nil {
+ 		streaming.WriteError(err, response.ResponseWriter)
+-		return
++		return nil, err
+ 	}
+ 
+-	proxyStream(response.ResponseWriter, request.Request, url)
++	return url, nil
+ }
+ 
+ // getExec handles requests to run a command inside a container.
+-- 
+2.25.1
+

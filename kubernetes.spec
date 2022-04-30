@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      7
+Release:      8
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -29,6 +29,7 @@ Patch6001: 0002-fix-compile-options.patch
 Patch6002: 0003-fix-CVE-2021-25735.patch
 Patch6003: 0004-fix-CVE-2021-25737.patch
 Patch6004: 0005-fix-CVE-2021-25741.patch
+Patch6005: 0006-kubelet-support-attach-websocket-protocol.patch
 
 %description
 Container cluster management.
@@ -260,6 +261,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Sat Mar 19 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-8
+- DESC: kubelet attach support ws
+
 * Wed Mar 02 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-7
 - DESC: fix CVE-2021-25741
 

@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      7
+Release:      8
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -261,6 +261,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Fri Jul 29 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-8
+- DESC: delete -Sgit from %autosetup
+
 * Sat Mar 19 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-7
 - DESC: kubelet attach support ws
 

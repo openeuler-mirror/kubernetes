@@ -276,7 +276,7 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 * Mon Mar 22 2021 wangfengtu <wangfengtu@huawei.com> - 1.20.2-4
 - Fix compile options
 
-* The Feb 09 2021 lixiang <lixiang172@huawei.com> - 1.20.2-3
+* Tue Feb 09 2021 lixiang <lixiang172@huawei.com> - 1.20.2-3
 - Remove go-md2man build require since it's no longer provided
 
 * Thu Feb 2 2021 gaohuatao <gaohuatao@huawei.com> - 1.20.2-2

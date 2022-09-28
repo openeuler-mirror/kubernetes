@@ -275,7 +275,7 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 - DESC: fix CVE-2021-25735 and CVE-2021-25737
 
 * Fri Jul 30 2021 chenyanpanHW <chenyanpan@huawei.com> - 1.20.2-5
-- DESC: delete -Sgit from %autosetup
+- DESC: delete -Sgit from %%autosetup
 
 * Mon Mar 22 2021 wangfengtu <wangfengtu@huawei.com> - 1.20.2-4
 - Fix compile options

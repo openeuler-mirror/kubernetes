@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      11
+Release:      12
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -264,6 +264,9 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Tue Nov 01 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-12
+- DESC: add log and modify timeout
+
 * Tue Nov 01 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-11
 - DESC: timeout wait backend to frontend complete
 

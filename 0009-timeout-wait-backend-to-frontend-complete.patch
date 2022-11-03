@@ -18,7 +18,7 @@ index f21629af..c14ea8dd 100644
  
 +	select {
 +	case <-backendToFrontendComplete:
-+	case <-time.Tick(300 * time.Second):
++	case <-time.Tick(30 * time.Second):
 +		klog.Errorf("Wait backend to frontend complete timeout")
 +	}
 +

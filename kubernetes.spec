@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      13
+Release:      14
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -264,6 +264,12 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Thu Nov 17 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-14
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:update tar package from source
+
 * Wed Nov 02 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-13
 - DESC: decrease wait time
 

@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      14
+Release:      15
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -40,7 +40,7 @@ Container cluster management.
 %package master
 Summary: Kubernetes services for master host
 
-BuildRequires: golang systemd rsync
+BuildRequires: golang systemd rsync git
 
 Requires(pre): shadow-utils
 Requires: kubernetes-client = %{version}-%{release}
@@ -264,6 +264,12 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Mon Nov 28 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-15
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:fix CVE-2021-25743
+
 * Thu Nov 17 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-14
 - Type:bugfix
 - CVE:NA

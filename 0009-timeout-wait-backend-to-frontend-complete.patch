@@ -1,0 +1,30 @@
+From dda1aed8f9655c9cac813a3633b27bacdce9af88 Mon Sep 17 00:00:00 2001
+From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+Date: Tue, 1 Nov 2022 15:34:16 +0800
+Subject: [PATCH] timeout wait backend to frontend complete
+
+Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
+---
+ pkg/kubelet/cri/streaming/remotecommand/proxy.go | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/pkg/kubelet/cri/streaming/remotecommand/proxy.go b/pkg/kubelet/cri/streaming/remotecommand/proxy.go
+index f21629af..c14ea8dd 100644
+--- a/pkg/kubelet/cri/streaming/remotecommand/proxy.go
++++ b/pkg/kubelet/cri/streaming/remotecommand/proxy.go
+@@ -129,6 +129,12 @@ func ProxyToWebSocket(w http.ResponseWriter, r *http.Request, url *url.URL, opts
+ 	case <-frontendResizeToBackendComplete:
+ 	}
+ 
++	select {
++	case <-backendToFrontendComplete:
++	case <-time.Tick(30 * time.Second):
++		klog.Errorf("Wait backend to frontend complete timeout")
++	}
++
+ 	if errConnection != nil {
+ 		klog.Errorf("SpdyProxy: the connection disconnected: %v", errConnection)
+ 		if exitErr, ok := errConnection.(exec.ExitError); ok && exitErr.Exited() {
+-- 
+2.25.1
+

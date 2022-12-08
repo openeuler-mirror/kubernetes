@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      15
+Release:      16
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -33,6 +33,8 @@ Patch6005: 0006-kubelet-support-attach-websocket-protocol.patch
 Patch6006: 0007-Add-an-option-for-aggregator.patch
 Patch6007: 0008-kubelet-fix-websocket-reference-nil-pointer.patch
 Patch6008: 0009-timeout-wait-backend-to-frontend-complete.patch
+Patch6009: 0010-Escape-terminal-special-characters-in-kubectl-112553.patch
+Patch6010: 0011-Remove-Endpoints-write-access-from-aggregated-edit-r.patch
 
 %description
 Container cluster management.
@@ -264,6 +266,12 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Thu Dec 08 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-16
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:add patch and fix CVE-2021-25740
+
 * Mon Nov 28 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-15
 - Type:bugfix
 - CVE:NA

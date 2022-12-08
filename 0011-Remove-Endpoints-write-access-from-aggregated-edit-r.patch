@@ -1,0 +1,38 @@
+From 416efdab26afe06cf2b57991dfac511769bf508b Mon Sep 17 00:00:00 2001
+From: Rob Scott <robertjscott@google.com>
+Date: Tue, 13 Jul 2021 22:17:12 -0700
+Subject: [PATCH] Remove Endpoints write access from aggregated edit role
+
+---
+ plugin/pkg/auth/authorizer/rbac/bootstrappolicy/policy.go       | 2 +-
+ .../authorizer/rbac/bootstrappolicy/testdata/cluster-roles.yaml | 1 -
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/policy.go b/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/policy.go
+index 352543a2..903c6723 100644
+--- a/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/policy.go
++++ b/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/policy.go
+@@ -286,7 +286,7 @@ func ClusterRoles() []rbacv1.ClusterRole {
+ 
+ 				rbacv1helpers.NewRule(Write...).Groups(legacyGroup).Resources("pods", "pods/attach", "pods/proxy", "pods/exec", "pods/portforward").RuleOrDie(),
+ 				rbacv1helpers.NewRule(Write...).Groups(legacyGroup).Resources("replicationcontrollers", "replicationcontrollers/scale", "serviceaccounts",
+-					"services", "services/proxy", "endpoints", "persistentvolumeclaims", "configmaps", "secrets").RuleOrDie(),
++					"services", "services/proxy", "persistentvolumeclaims", "configmaps", "secrets").RuleOrDie(),
+ 
+ 				rbacv1helpers.NewRule(Write...).Groups(appsGroup).Resources(
+ 					"statefulsets", "statefulsets/scale",
+diff --git a/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/testdata/cluster-roles.yaml b/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/testdata/cluster-roles.yaml
+index 2f571c76..e869c122 100644
+--- a/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/testdata/cluster-roles.yaml
++++ b/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/testdata/cluster-roles.yaml
+@@ -128,7 +128,6 @@ items:
+     - ""
+     resources:
+     - configmaps
+-    - endpoints
+     - persistentvolumeclaims
+     - replicationcontrollers
+     - replicationcontrollers/scale
+-- 
+2.25.1
+

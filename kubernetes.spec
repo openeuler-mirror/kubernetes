@@ -2,12 +2,12 @@
 %global _buildshell  /bin/bash
 
 Name:         kubernetes
-Version:      1.20.2
-Release:      16
+Version:      1.24.0
+Release:      1
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
-Source0:      https://github.com/kubernetes/kubernetes/archive/v1.20.2.tar.gz
+Source0:      https://github.com/kubernetes/kubernetes/archive/v1.24.0.tar.gz
 Source1:      kube-proxy.service
 Source2:      kube-apiserver.service
 Source3:      kube-scheduler.service
@@ -24,17 +24,11 @@ Source13:     kubernetes-accounting.conf
 Source14:     kubeadm.conf
 Source15:     kubernetes.conf
 
-Patch6000: 0001-kubelet-support-exec-websocket-protocol.patch
-Patch6001: 0002-fix-compile-options.patch
-Patch6002: 0003-fix-CVE-2021-25735.patch
-Patch6003: 0004-fix-CVE-2021-25737.patch
-Patch6004: 0005-fix-CVE-2021-25741.patch
-Patch6005: 0006-kubelet-support-attach-websocket-protocol.patch
-Patch6006: 0007-Add-an-option-for-aggregator.patch
-Patch6007: 0008-kubelet-fix-websocket-reference-nil-pointer.patch
-Patch6008: 0009-timeout-wait-backend-to-frontend-complete.patch
-Patch6009: 0010-Escape-terminal-special-characters-in-kubectl-112553.patch
-Patch6010: 0011-Remove-Endpoints-write-access-from-aggregated-edit-r.patch
+Patch0001: 0001-fix-compile-options.patch
+Patch0002: 0002-kubelet-support-exec-and-attach-websocket-protocol.patch
+Patch0003: 0003-timeout-wait-backend-to-frontend-complete.patch
+Patch0004: 0004-Add-an-option-for-aggregator.patch
+Patch0005: 0005-Escape-terminal-special-characters-in-kubectl-112553.patch
 
 %description
 Container cluster management.
@@ -95,7 +89,7 @@ Summary: Help documents for kubernetes
 Help documents for kubernetes.
 
 %prep
-%autosetup -n kubernetes-1.20.2 -p1
+%autosetup -n kubernetes-%{version} -p1
 mkdir -p src/k8s.io/kubernetes
 mv $(ls | grep -v "^src$") src/k8s.io/kubernetes/.
 
@@ -266,6 +260,12 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Tue Jan 03 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.24.0-1
+- Type:update
+- CVE:NA
+- SUG:NA
+- DESC:update to 1.24.0
+
 * Thu Dec 08 2022 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-16
 - Type:bugfix
 - CVE:NA
@@ -314,13 +314,13 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 * Mon Mar 22 2021 wangfengtu <wangfengtu@huawei.com> - 1.20.2-4
 - Fix compile options
 
-* The Feb 09 2021 lixiang <lixiang172@huawei.com> - 1.20.2-3
+* Tue Feb 09 2021 lixiang <lixiang172@huawei.com> - 1.20.2-3
 - Remove go-md2man build require since it's no longer provided
 
-* Thu Feb 2 2021 gaohuatao <gaohuatao@huawei.com> - 1.20.2-2
+* Tue Feb 2 2021 gaohuatao <gaohuatao@huawei.com> - 1.20.2-2
 - Add kubelet support ws
 
-* Fri Jan 20 2021 lixiang <lixiang172@huawei.com> - 1.20.2-1
+* Wed Jan 20 2021 lixiang <lixiang172@huawei.com> - 1.20.2-1
 - Bump version to v1.20.2
 
 * Fri Sep 18 2020 xiadanni <xiadanni1@huawei.com> - 1.18.6-3

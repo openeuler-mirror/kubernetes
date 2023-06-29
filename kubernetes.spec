@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.24.0
-Release:      1
+Release:      2
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -29,6 +29,7 @@ Patch0002: 0002-kubelet-support-exec-and-attach-websocket-protocol.patch
 Patch0003: 0003-timeout-wait-backend-to-frontend-complete.patch
 Patch0004: 0004-Add-an-option-for-aggregator.patch
 Patch0005: 0005-Escape-terminal-special-characters-in-kubectl-112553.patch
+Patch0006: 0006-Return-error-for-localhost-seccomp-type-with-no-loca.patch
 
 %description
 Container cluster management.
@@ -260,6 +261,12 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Thu Jun 29 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.24.0-2
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:fix CVE-2023-2431
+
 * Tue Jan 03 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.24.0-1
 - Type:update
 - CVE:NA

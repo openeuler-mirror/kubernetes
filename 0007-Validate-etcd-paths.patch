@@ -9,7 +9,7 @@ Subject: [PATCH] Validate etcd paths
  2 files changed, 261 insertions(+), 131 deletions(-)
 
 diff --git a/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go b/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go
-index f97bc3833e767..0e2fb36870527 100644
+index 75a6c3b5..2069777c 100644
 --- a/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go
 +++ b/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go
 @@ -99,16 +99,21 @@ func New(c *clientv3.Client, codec runtime.Codec, newFunc func() runtime.Object,
@@ -340,7 +340,7 @@ index f97bc3833e767..0e2fb36870527 100644
  // On success, objPtr would be set to the object.
  func decode(codec runtime.Codec, versioner storage.Versioner, value []byte, objPtr runtime.Object, rev int64) error {
 diff --git a/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store_test.go b/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store_test.go
-index 6ace3f68bc85c..811036a7cdfb4 100644
+index fedbcce3..65a73c21 100644
 --- a/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store_test.go
 +++ b/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store_test.go
 @@ -64,6 +64,7 @@ var scheme = runtime.NewScheme()
@@ -993,7 +993,7 @@ index 6ace3f68bc85c..811036a7cdfb4 100644
  	}
  	for configuredPrefix, effectivePrefix := range testcases {
  		store := newStore(client, codec, nil, configuredPrefix, schema.GroupResource{Resource: "widgets"}, transformer, true, newTestLeaseManagerConfig())
-@@ -2404,7 +2405,7 @@ func TestConsistentList(t *testing.T) {
+@@ -2375,7 +2376,7 @@ func TestConsistentList(t *testing.T) {
  		Predicate: predicate,
  		Recursive: true,
  	}
@@ -1002,7 +1002,7 @@ index 6ace3f68bc85c..811036a7cdfb4 100644
  		t.Fatalf("failed to list objects: %v", err)
  	}
  
-@@ -2417,7 +2418,7 @@ func TestConsistentList(t *testing.T) {
+@@ -2388,7 +2389,7 @@ func TestConsistentList(t *testing.T) {
  	}
  
  	result2 := example.PodList{}
@@ -1011,7 +1011,7 @@ index 6ace3f68bc85c..811036a7cdfb4 100644
  		t.Fatalf("failed to list objects: %v", err)
  	}
  
-@@ -2427,7 +2428,7 @@ func TestConsistentList(t *testing.T) {
+@@ -2398,7 +2399,7 @@ func TestConsistentList(t *testing.T) {
  	options.ResourceVersionMatch = metav1.ResourceVersionMatchNotOlderThan
  
  	result3 := example.PodList{}
@@ -1020,7 +1020,7 @@ index 6ace3f68bc85c..811036a7cdfb4 100644
  		t.Fatalf("failed to list objects: %v", err)
  	}
  
-@@ -2435,7 +2436,7 @@ func TestConsistentList(t *testing.T) {
+@@ -2406,7 +2407,7 @@ func TestConsistentList(t *testing.T) {
  	options.ResourceVersionMatch = metav1.ResourceVersionMatchExact
  
  	result4 := example.PodList{}
@@ -1029,7 +1029,7 @@ index 6ace3f68bc85c..811036a7cdfb4 100644
  		t.Fatalf("failed to list objects: %v", err)
  	}
  
-@@ -2496,15 +2497,15 @@ func TestLeaseMaxObjectCount(t *testing.T) {
+@@ -2467,15 +2468,15 @@ func TestLeaseMaxObjectCount(t *testing.T) {
  		expectAttachedCount int64
  	}{
  		{
@@ -1048,7 +1048,7 @@ index 6ace3f68bc85c..811036a7cdfb4 100644
  			// We assume each time has 1 object attached to the lease
  			// so after granting a new lease, the recorded count is set to 1
  			expectAttachedCount: 1,
-@@ -2532,3 +2533,81 @@ func expectNoDiff(t *testing.T, msg string, expected, got interface{}) {
+@@ -2503,3 +2504,81 @@ func expectNoDiff(t *testing.T, msg string, expected, got interface{}) {
  		}
  	}
  }

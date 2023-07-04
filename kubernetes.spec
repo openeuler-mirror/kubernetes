@@ -3,7 +3,7 @@
 
 Name:         kubernetes
 Version:      1.20.2
-Release:      19
+Release:      20
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
@@ -38,6 +38,7 @@ Patch6010: 0011-Remove-Endpoints-write-access-from-aggregated-edit-r.patch
 Patch6011: 0012-Return-error-for-localhost-seccomp-type-with-no-loca.patch
 Patch6012: 0013-Validate-etcd-paths.patch
 Patch6013: 0014-fix-node-address-validation.patch
+Patch6014: 0015-Add-ephemeralcontainer-to-imagepolicy-securityaccoun.patch
 
 %description
 Container cluster management.
@@ -269,6 +270,12 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Tue Jul 04 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-20
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:fix CVE-2023-2727 and CVE-2023-2728
+
 * Tue Jul 04 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.20.2-19
 - Type:bugfix
 - CVE:NA

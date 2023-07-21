@@ -1,0 +1,439 @@
+From 604ad21799c43d87456cc76d3e591487de0a5152 Mon Sep 17 00:00:00 2001
+From: Craig Ingram <cjingram@google.com>
+Date: Fri, 24 Feb 2023 15:24:49 -0500
+Subject: [PATCH] Return error for localhost seccomp type with no localhost
+ profile defined
+
+---
+ pkg/kubelet/kuberuntime/helpers.go          |  60 +++++-----
+ pkg/kubelet/kuberuntime/helpers_test.go     | 120 +++++++++++++-------
+ pkg/kubelet/kuberuntime/security_context.go |  11 +-
+ 3 files changed, 121 insertions(+), 70 deletions(-)
+
+diff --git a/pkg/kubelet/kuberuntime/helpers.go b/pkg/kubelet/kuberuntime/helpers.go
+index 9343b78335a..14ed0dd3bfb 100644
+--- a/pkg/kubelet/kuberuntime/helpers.go
++++ b/pkg/kubelet/kuberuntime/helpers.go
+@@ -210,32 +210,36 @@ func toKubeRuntimeStatus(status *runtimeapi.RuntimeStatus) *kubecontainer.Runtim
+ 	return &kubecontainer.RuntimeStatus{Conditions: conditions}
+ }
+ 
+-func fieldProfile(scmp *v1.SeccompProfile, profileRootPath string, fallbackToRuntimeDefault bool) string {
++func fieldProfile(scmp *v1.SeccompProfile, profileRootPath string, fallbackToRuntimeDefault bool) (string, error) {
+ 	if scmp == nil {
+ 		if fallbackToRuntimeDefault {
+-			return v1.SeccompProfileRuntimeDefault
++			return v1.SeccompProfileRuntimeDefault, nil
+ 		}
+-		return ""
++		return "", nil
+ 	}
+ 	if scmp.Type == v1.SeccompProfileTypeRuntimeDefault {
+-		return v1.SeccompProfileRuntimeDefault
++		return v1.SeccompProfileRuntimeDefault, nil
+ 	}
+-	if scmp.Type == v1.SeccompProfileTypeLocalhost && scmp.LocalhostProfile != nil && len(*scmp.LocalhostProfile) > 0 {
+-		fname := filepath.Join(profileRootPath, *scmp.LocalhostProfile)
+-		return v1.SeccompLocalhostProfileNamePrefix + fname
++	if scmp.Type == v1.SeccompProfileTypeLocalhost {
++		if scmp.LocalhostProfile != nil && len(*scmp.LocalhostProfile) > 0 {
++			fname := filepath.Join(profileRootPath, *scmp.LocalhostProfile)
++			return v1.SeccompLocalhostProfileNamePrefix + fname, nil
++		} else {
++			return "", fmt.Errorf("localhostProfile must be set if seccompProfile type is Localhost.")
++		}
+ 	}
+ 	if scmp.Type == v1.SeccompProfileTypeUnconfined {
+-		return v1.SeccompProfileNameUnconfined
++		return v1.SeccompProfileNameUnconfined, nil
+ 	}
+ 
+ 	if fallbackToRuntimeDefault {
+-		return v1.SeccompProfileRuntimeDefault
++		return v1.SeccompProfileRuntimeDefault, nil
+ 	}
+-	return ""
++	return "", nil
+ }
+ 
+ func (m *kubeGenericRuntimeManager) getSeccompProfilePath(annotations map[string]string, containerName string,
+-	podSecContext *v1.PodSecurityContext, containerSecContext *v1.SecurityContext, fallbackToRuntimeDefault bool) string {
++	podSecContext *v1.PodSecurityContext, containerSecContext *v1.SecurityContext, fallbackToRuntimeDefault bool) (string, error) {
+ 	// container fields are applied first
+ 	if containerSecContext != nil && containerSecContext.SeccompProfile != nil {
+ 		return fieldProfile(containerSecContext.SeccompProfile, m.seccompProfileRoot, fallbackToRuntimeDefault)
+@@ -247,42 +251,46 @@ func (m *kubeGenericRuntimeManager) getSeccompProfilePath(annotations map[string
+ 	}
+ 
+ 	if fallbackToRuntimeDefault {
+-		return v1.SeccompProfileRuntimeDefault
++		return v1.SeccompProfileRuntimeDefault, nil
+ 	}
+ 
+-	return ""
++	return "", nil
+ }
+ 
+-func fieldSeccompProfile(scmp *v1.SeccompProfile, profileRootPath string, fallbackToRuntimeDefault bool) *runtimeapi.SecurityProfile {
++func fieldSeccompProfile(scmp *v1.SeccompProfile, profileRootPath string, fallbackToRuntimeDefault bool) (*runtimeapi.SecurityProfile, error) {
+ 	if scmp == nil {
+ 		if fallbackToRuntimeDefault {
+ 			return &runtimeapi.SecurityProfile{
+ 				ProfileType: runtimeapi.SecurityProfile_RuntimeDefault,
+-			}
++			}, nil
+ 		}
+ 		return &runtimeapi.SecurityProfile{
+ 			ProfileType: runtimeapi.SecurityProfile_Unconfined,
+-		}
++		}, nil
+ 	}
+ 	if scmp.Type == v1.SeccompProfileTypeRuntimeDefault {
+ 		return &runtimeapi.SecurityProfile{
+ 			ProfileType: runtimeapi.SecurityProfile_RuntimeDefault,
+-		}
++		}, nil
+ 	}
+-	if scmp.Type == v1.SeccompProfileTypeLocalhost && scmp.LocalhostProfile != nil && len(*scmp.LocalhostProfile) > 0 {
+-		fname := filepath.Join(profileRootPath, *scmp.LocalhostProfile)
+-		return &runtimeapi.SecurityProfile{
+-			ProfileType:  runtimeapi.SecurityProfile_Localhost,
+-			LocalhostRef: fname,
++	if scmp.Type == v1.SeccompProfileTypeLocalhost {
++		if scmp.LocalhostProfile != nil && len(*scmp.LocalhostProfile) > 0 {
++			fname := filepath.Join(profileRootPath, *scmp.LocalhostProfile)
++			return &runtimeapi.SecurityProfile{
++				ProfileType:  runtimeapi.SecurityProfile_Localhost,
++				LocalhostRef: fname,
++			}, nil
++		} else {
++			return nil, fmt.Errorf("localhostProfile must be set if seccompProfile type is Localhost.")
+ 		}
+ 	}
+ 	return &runtimeapi.SecurityProfile{
+ 		ProfileType: runtimeapi.SecurityProfile_Unconfined,
+-	}
++	}, nil
+ }
+ 
+ func (m *kubeGenericRuntimeManager) getSeccompProfile(annotations map[string]string, containerName string,
+-	podSecContext *v1.PodSecurityContext, containerSecContext *v1.SecurityContext, fallbackToRuntimeDefault bool) *runtimeapi.SecurityProfile {
++	podSecContext *v1.PodSecurityContext, containerSecContext *v1.SecurityContext, fallbackToRuntimeDefault bool) (*runtimeapi.SecurityProfile, error) {
+ 	// container fields are applied first
+ 	if containerSecContext != nil && containerSecContext.SeccompProfile != nil {
+ 		return fieldSeccompProfile(containerSecContext.SeccompProfile, m.seccompProfileRoot, fallbackToRuntimeDefault)
+@@ -296,10 +304,10 @@ func (m *kubeGenericRuntimeManager) getSeccompProfile(annotations map[string]str
+ 	if fallbackToRuntimeDefault {
+ 		return &runtimeapi.SecurityProfile{
+ 			ProfileType: runtimeapi.SecurityProfile_RuntimeDefault,
+-		}
++		}, nil
+ 	}
+ 
+ 	return &runtimeapi.SecurityProfile{
+ 		ProfileType: runtimeapi.SecurityProfile_Unconfined,
+-	}
++	}, nil
+ }
+diff --git a/pkg/kubelet/kuberuntime/helpers_test.go b/pkg/kubelet/kuberuntime/helpers_test.go
+index 83a8da8793a..5fbe640b44a 100644
+--- a/pkg/kubelet/kuberuntime/helpers_test.go
++++ b/pkg/kubelet/kuberuntime/helpers_test.go
+@@ -242,17 +242,18 @@ func TestFieldProfile(t *testing.T) {
+ 		scmpProfile     *v1.SeccompProfile
+ 		rootPath        string
+ 		expectedProfile string
++		expectedError   string
+ 	}{
+ 		{
+ 			description:     "no seccompProfile should return empty",
+ 			expectedProfile: "",
+ 		},
+ 		{
+-			description: "type localhost without profile should return empty",
++			description: "type localhost without profile should return error",
+ 			scmpProfile: &v1.SeccompProfile{
+ 				Type: v1.SeccompProfileTypeLocalhost,
+ 			},
+-			expectedProfile: "",
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+ 			description: "unknown type should return empty",
+@@ -279,7 +280,7 @@ func TestFieldProfile(t *testing.T) {
+ 			description: "SeccompProfileTypeLocalhost should return localhost",
+ 			scmpProfile: &v1.SeccompProfile{
+ 				Type:             v1.SeccompProfileTypeLocalhost,
+-				LocalhostProfile: utilpointer.StringPtr("profile.json"),
++				LocalhostProfile: utilpointer.String("profile.json"),
+ 			},
+ 			rootPath:        "/test/",
+ 			expectedProfile: "localhost//test/profile.json",
+@@ -287,8 +288,13 @@ func TestFieldProfile(t *testing.T) {
+ 	}
+ 
+ 	for i, test := range tests {
+-		seccompProfile := fieldProfile(test.scmpProfile, test.rootPath, false)
+-		assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		seccompProfile, err := fieldProfile(test.scmpProfile, test.rootPath, false)
++		if test.expectedError != "" {
++			assert.EqualError(t, err, test.expectedError, "TestCase[%d]: %s", i, test.description)
++		} else {
++			assert.NoError(t, err, "TestCase[%d]: %s", i, test.description)
++			assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		}
+ 	}
+ }
+ 
+@@ -298,17 +304,18 @@ func TestFieldProfileDefaultSeccomp(t *testing.T) {
+ 		scmpProfile     *v1.SeccompProfile
+ 		rootPath        string
+ 		expectedProfile string
++		expectedError   string
+ 	}{
+ 		{
+ 			description:     "no seccompProfile should return runtime/default",
+ 			expectedProfile: v1.SeccompProfileRuntimeDefault,
+ 		},
+ 		{
+-			description: "type localhost without profile should return runtime/default",
++			description: "type localhost without profile should return error",
+ 			scmpProfile: &v1.SeccompProfile{
+ 				Type: v1.SeccompProfileTypeLocalhost,
+ 			},
+-			expectedProfile: v1.SeccompProfileRuntimeDefault,
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+ 			description: "unknown type should return runtime/default",
+@@ -335,7 +342,7 @@ func TestFieldProfileDefaultSeccomp(t *testing.T) {
+ 			description: "SeccompProfileTypeLocalhost should return localhost",
+ 			scmpProfile: &v1.SeccompProfile{
+ 				Type:             v1.SeccompProfileTypeLocalhost,
+-				LocalhostProfile: utilpointer.StringPtr("profile.json"),
++				LocalhostProfile: utilpointer.String("profile.json"),
+ 			},
+ 			rootPath:        "/test/",
+ 			expectedProfile: "localhost//test/profile.json",
+@@ -343,8 +350,13 @@ func TestFieldProfileDefaultSeccomp(t *testing.T) {
+ 	}
+ 
+ 	for i, test := range tests {
+-		seccompProfile := fieldProfile(test.scmpProfile, test.rootPath, true)
+-		assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		seccompProfile, err := fieldProfile(test.scmpProfile, test.rootPath, true)
++		if test.expectedError != "" {
++			assert.EqualError(t, err, test.expectedError, "TestCase[%d]: %s", i, test.description)
++		} else {
++			assert.NoError(t, err, "TestCase[%d]: %s", i, test.description)
++			assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		}
+ 	}
+ }
+ 
+@@ -359,6 +371,7 @@ func TestGetSeccompProfilePath(t *testing.T) {
+ 		containerSc     *v1.SecurityContext
+ 		containerName   string
+ 		expectedProfile string
++		expectedError   string
+ 	}{
+ 		{
+ 			description:     "no seccomp should return empty",
+@@ -395,14 +408,14 @@ func TestGetSeccompProfilePath(t *testing.T) {
+ 			expectedProfile: seccompLocalhostPath("filename"),
+ 		},
+ 		{
+-			description:     "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns empty",
+-			podSc:           &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: "",
++			description:   "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			podSc:         &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+-			description:     "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns empty",
+-			containerSc:     &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: "",
++			description:   "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			containerSc:   &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+ 			description:     "container seccomp profile set to SeccompProfileTypeLocalhost returns 'localhost/' + LocalhostProfile",
+@@ -418,8 +431,13 @@ func TestGetSeccompProfilePath(t *testing.T) {
+ 	}
+ 
+ 	for i, test := range tests {
+-		seccompProfile := m.getSeccompProfilePath(test.annotation, test.containerName, test.podSc, test.containerSc, false)
+-		assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		seccompProfile, err := m.getSeccompProfilePath(test.annotation, test.containerName, test.podSc, test.containerSc, false)
++		if test.expectedError != "" {
++			assert.EqualError(t, err, test.expectedError, "TestCase[%d]: %s", i, test.description)
++		} else {
++			assert.NoError(t, err, "TestCase[%d]: %s", i, test.description)
++			assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		}
+ 	}
+ }
+ 
+@@ -434,6 +452,7 @@ func TestGetSeccompProfilePathDefaultSeccomp(t *testing.T) {
+ 		containerSc     *v1.SecurityContext
+ 		containerName   string
+ 		expectedProfile string
++		expectedError   string
+ 	}{
+ 		{
+ 			description:     "no seccomp should return runtime/default",
+@@ -470,14 +489,14 @@ func TestGetSeccompProfilePathDefaultSeccomp(t *testing.T) {
+ 			expectedProfile: seccompLocalhostPath("filename"),
+ 		},
+ 		{
+-			description:     "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns runtime/default",
+-			podSc:           &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: v1.SeccompProfileRuntimeDefault,
++			description:   "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			podSc:         &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+-			description:     "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns runtime/default",
+-			containerSc:     &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: v1.SeccompProfileRuntimeDefault,
++			description:   "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			containerSc:   &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+ 			description:     "container seccomp profile set to SeccompProfileTypeLocalhost returns 'localhost/' + LocalhostProfile",
+@@ -493,8 +512,13 @@ func TestGetSeccompProfilePathDefaultSeccomp(t *testing.T) {
+ 	}
+ 
+ 	for i, test := range tests {
+-		seccompProfile := m.getSeccompProfilePath(test.annotation, test.containerName, test.podSc, test.containerSc, true)
+-		assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		seccompProfile, err := m.getSeccompProfilePath(test.annotation, test.containerName, test.podSc, test.containerSc, true)
++		if test.expectedError != "" {
++			assert.EqualError(t, err, test.expectedError, "TestCase[%d]: %s", i, test.description)
++		} else {
++			assert.NoError(t, err, "TestCase[%d]: %s", i, test.description)
++			assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		}
+ 	}
+ }
+ 
+@@ -517,6 +541,7 @@ func TestGetSeccompProfile(t *testing.T) {
+ 		containerSc     *v1.SecurityContext
+ 		containerName   string
+ 		expectedProfile *runtimeapi.SecurityProfile
++		expectedError   string
+ 	}{
+ 		{
+ 			description:     "no seccomp should return unconfined",
+@@ -551,14 +576,14 @@ func TestGetSeccompProfile(t *testing.T) {
+ 			},
+ 		},
+ 		{
+-			description:     "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns unconfined",
+-			podSc:           &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: unconfinedProfile,
++			description:   "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			podSc:         &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+-			description:     "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns unconfined",
+-			containerSc:     &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: unconfinedProfile,
++			description:   "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			containerSc:   &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+ 			description: "container seccomp profile set to SeccompProfileTypeLocalhost returns 'localhost/' + LocalhostProfile",
+@@ -587,8 +612,13 @@ func TestGetSeccompProfile(t *testing.T) {
+ 	}
+ 
+ 	for i, test := range tests {
+-		seccompProfile := m.getSeccompProfile(test.annotation, test.containerName, test.podSc, test.containerSc, false)
+-		assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		seccompProfile, err := m.getSeccompProfile(test.annotation, test.containerName, test.podSc, test.containerSc, false)
++		if test.expectedError != "" {
++			assert.EqualError(t, err, test.expectedError, "TestCase[%d]: %s", i, test.description)
++		} else {
++			assert.NoError(t, err, "TestCase[%d]: %s", i, test.description)
++			assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		}
+ 	}
+ }
+ 
+@@ -611,6 +641,7 @@ func TestGetSeccompProfileDefaultSeccomp(t *testing.T) {
+ 		containerSc     *v1.SecurityContext
+ 		containerName   string
+ 		expectedProfile *runtimeapi.SecurityProfile
++		expectedError   string
+ 	}{
+ 		{
+ 			description:     "no seccomp should return RuntimeDefault",
+@@ -645,14 +676,14 @@ func TestGetSeccompProfileDefaultSeccomp(t *testing.T) {
+ 			},
+ 		},
+ 		{
+-			description:     "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns unconfined",
+-			podSc:           &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: unconfinedProfile,
++			description:   "pod seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			podSc:         &v1.PodSecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+-			description:     "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns unconfined",
+-			containerSc:     &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
+-			expectedProfile: unconfinedProfile,
++			description:   "container seccomp profile set to SeccompProfileTypeLocalhost with empty LocalhostProfile returns error",
++			containerSc:   &v1.SecurityContext{SeccompProfile: &v1.SeccompProfile{Type: v1.SeccompProfileTypeLocalhost}},
++			expectedError: "localhostProfile must be set if seccompProfile type is Localhost.",
+ 		},
+ 		{
+ 			description: "container seccomp profile set to SeccompProfileTypeLocalhost returns 'localhost/' + LocalhostProfile",
+@@ -681,8 +712,13 @@ func TestGetSeccompProfileDefaultSeccomp(t *testing.T) {
+ 	}
+ 
+ 	for i, test := range tests {
+-		seccompProfile := m.getSeccompProfile(test.annotation, test.containerName, test.podSc, test.containerSc, true)
+-		assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		seccompProfile, err := m.getSeccompProfile(test.annotation, test.containerName, test.podSc, test.containerSc, true)
++		if test.expectedError != "" {
++			assert.EqualError(t, err, test.expectedError, "TestCase[%d]: %s", i, test.description)
++		} else {
++			assert.NoError(t, err, "TestCase[%d]: %s", i, test.description)
++			assert.Equal(t, test.expectedProfile, seccompProfile, "TestCase[%d]: %s", i, test.description)
++		}
+ 	}
+ }
+ 
+diff --git a/pkg/kubelet/kuberuntime/security_context.go b/pkg/kubelet/kuberuntime/security_context.go
+index 5e6f05b4e18..d933a710424 100644
+--- a/pkg/kubelet/kuberuntime/security_context.go
++++ b/pkg/kubelet/kuberuntime/security_context.go
+@@ -37,9 +37,16 @@ func (m *kubeGenericRuntimeManager) determineEffectiveSecurityContext(pod *v1.Po
+ 
+ 	// TODO: Deprecated, remove after we switch to Seccomp field
+ 	// set SeccompProfilePath.
+-	synthesized.SeccompProfilePath = m.getSeccompProfilePath(pod.Annotations, container.Name, pod.Spec.SecurityContext, container.SecurityContext, m.seccompDefault)
++	var err error
++	synthesized.SeccompProfilePath, err = m.getSeccompProfilePath(pod.Annotations, container.Name, pod.Spec.SecurityContext, container.SecurityContext, m.seccompDefault)
++	if err != nil {
++		return nil, err
++	}
+ 
+-	synthesized.Seccomp = m.getSeccompProfile(pod.Annotations, container.Name, pod.Spec.SecurityContext, container.SecurityContext, m.seccompDefault)
++	synthesized.Seccomp, err = m.getSeccompProfile(pod.Annotations, container.Name, pod.Spec.SecurityContext, container.SecurityContext, m.seccompDefault)
++	if err != nil {
++		return nil, err
++	}
+ 
+ 	// set ApparmorProfile.
+ 	synthesized.ApparmorProfile = apparmor.GetProfileNameFromPodAnnotations(pod.Annotations, container.Name)
+-- 
+2.25.1
+

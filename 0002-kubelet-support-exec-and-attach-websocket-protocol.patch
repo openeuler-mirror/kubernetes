@@ -1,21 +1,21 @@
-From 2bdde6764d529d9f0633178b171aa193280d6ecb Mon Sep 17 00:00:00 2001
+From cb4f12375beffd61f3b2d666ca3f92d574ceb597 Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 Date: Tue, 3 Jan 2023 14:20:10 +0800
-Subject: kubelet support exec and attach websocket protocol
+Subject: [PATCH] kubelet support exec and attach websocket protocol
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
- .../cri/streaming/remotecommand/proxy.go      | 206 ++++++++++++++++++
+ .../cri/streaming/remotecommand/proxy.go      | 212 ++++++++++++++++++
  pkg/kubelet/server/server.go                  |  43 +++-
- 2 files changed, 241 insertions(+), 8 deletions(-)
+ 2 files changed, 247 insertions(+), 8 deletions(-)
  create mode 100644 pkg/kubelet/cri/streaming/remotecommand/proxy.go
 
 diff --git a/pkg/kubelet/cri/streaming/remotecommand/proxy.go b/pkg/kubelet/cri/streaming/remotecommand/proxy.go
 new file mode 100644
-index 00000000..f21629af
+index 00000000..179d8183
 --- /dev/null
 +++ b/pkg/kubelet/cri/streaming/remotecommand/proxy.go
-@@ -0,0 +1,206 @@
+@@ -0,0 +1,212 @@
 +package remotecommand
 +
 +import (
@@ -33,8 +33,8 @@ index 00000000..f21629af
 +	"k8s.io/apimachinery/pkg/apis/meta/v1"
 +	remotecommandconsts "k8s.io/apimachinery/pkg/util/remotecommand"
 +	"k8s.io/apimachinery/pkg/util/runtime"
++	"k8s.io/client-go/util/exec"
 +	"k8s.io/klog/v2"
-+	"k8s.io/kubernetes/staging/src/k8s.io/client-go/util/exec"
 +)
 +
 +var (
@@ -147,6 +147,12 @@ index 00000000..f21629af
 +	case <-frontendResizeToBackendComplete:
 +	}
 +
++	select {
++	case <-backendToFrontendComplete:
++	case <-time.Tick(30 * time.Second):
++		klog.Errorf("Wait backend to frontend complete timeout")
++	}
++
 +	if errConnection != nil {
 +		klog.Errorf("SpdyProxy: the connection disconnected: %v", errConnection)
 +		if exitErr, ok := errConnection.(exec.ExitError); ok && exitErr.Exited() {
@@ -223,10 +229,10 @@ index 00000000..f21629af
 +	return len(p), nil
 +}
 diff --git a/pkg/kubelet/server/server.go b/pkg/kubelet/server/server.go
-index 127192e0..cd11f807 100644
+index 84dbd545..73627d5b 100644
 --- a/pkg/kubelet/server/server.go
 +++ b/pkg/kubelet/server/server.go
-@@ -769,51 +769,78 @@ func proxyStream(w http.ResponseWriter, r *http.Request, url *url.URL) {
+@@ -797,51 +797,78 @@ func proxyStream(w http.ResponseWriter, r *http.Request, url *url.URL) {
  
  // getAttach handles requests to attach to a container.
  func (s *Server) getAttach(request *restful.Request, response *restful.Response) {

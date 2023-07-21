@@ -1,0 +1,215 @@
+From 98128bcf1bd9c9ea86c1c8d48c0b1acda4ec7e73 Mon Sep 17 00:00:00 2001
+From: David Leadbeater <dgl@dgl.cx>
+Date: Mon, 31 Oct 2022 01:08:43 +1000
+Subject: [PATCH] Escape terminal special characters in kubectl (#112553)
+
+* Escape terminal special characters in kubectl
+
+* Add escaping for kubectl alpha events
+---
+ .../cli-runtime/pkg/printers/tableprinter.go  | 13 ++++---
+ .../pkg/printers/tableprinter_test.go         | 12 ++++++
+ .../cli-runtime/pkg/printers/terminal.go      | 39 +++++++++++++++++++
+ .../kubectl/pkg/cmd/get/customcolumn.go       |  2 +-
+ .../kubectl/pkg/cmd/get/customcolumn_test.go  | 16 ++++++++
+ .../k8s.io/kubectl/pkg/describe/describe.go   |  7 +++-
+ .../kubectl/pkg/describe/describe_test.go     | 19 +++++++++
+ 7 files changed, 99 insertions(+), 9 deletions(-)
+ create mode 100644 staging/src/k8s.io/cli-runtime/pkg/printers/terminal.go
+
+diff --git a/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter.go b/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter.go
+index 87bc3f41..54859665 100644
+--- a/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter.go
++++ b/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter.go
+@@ -212,18 +212,19 @@ func printTable(table *metav1.Table, output io.Writer, options PrintOptions) err
+ 				case string:
+ 					print := val
+ 					truncated := false
+-					// truncate at newlines
+-					newline := strings.Index(print, "\n")
+-					if newline >= 0 {
++					// Truncate at the first newline, carriage return or formfeed
++					// (treated as a newline by tabwriter).
++					breakchar := strings.IndexAny(print, "\f\n\r")
++					if breakchar >= 0 {
+ 						truncated = true
+-						print = print[:newline]
++						print = print[:breakchar]
+ 					}
+-					fmt.Fprint(output, print)
++					WriteEscaped(output, print)
+ 					if truncated {
+ 						fmt.Fprint(output, "...")
+ 					}
+ 				default:
+-					fmt.Fprint(output, val)
++					WriteEscaped(output, fmt.Sprint(val))
+ 				}
+ 			}
+ 		}
+diff --git a/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter_test.go b/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter_test.go
+index b2caaa12..edbff3ff 100644
+--- a/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter_test.go
++++ b/staging/src/k8s.io/cli-runtime/pkg/printers/tableprinter_test.go
+@@ -769,6 +769,18 @@ test1   20h   This is first line which is long and goes for on and on and on an
+ 			},
+ 			expected: `NAME    AGE   DESCRIPTION
+ test1   20h   This is first...
++`,
++		},
++		// terminal special character, should be escaped
++		{
++			columns: []metav1.TableColumnDefinition{
++				{Name: "Name", Type: "string"},
++			},
++			rows: []metav1.TableRow{
++				{Cells: []interface{}{"test1\x1b"}},
++			},
++			expected: `NAME
++test1^[
+ `,
+ 		},
+ 	}
+diff --git a/staging/src/k8s.io/cli-runtime/pkg/printers/terminal.go b/staging/src/k8s.io/cli-runtime/pkg/printers/terminal.go
+new file mode 100644
+index 00000000..5a59491e
+--- /dev/null
++++ b/staging/src/k8s.io/cli-runtime/pkg/printers/terminal.go
+@@ -0,0 +1,39 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package printers
++
++import (
++	"io"
++	"strings"
++)
++
++// terminalEscaper replaces ANSI escape sequences and other terminal special
++// characters to avoid terminal escape character attacks (issue #101695).
++var terminalEscaper = strings.NewReplacer("\x1b", "^[", "\r", "\\r")
++
++// WriteEscaped replaces unsafe terminal characters with replacement strings
++// and writes them to the given writer.
++func WriteEscaped(writer io.Writer, output string) error {
++	_, err := terminalEscaper.WriteString(writer, output)
++	return err
++}
++
++// EscapeTerminal escapes terminal special characters in a human readable (but
++// non-reversible) format.
++func EscapeTerminal(in string) string {
++	return terminalEscaper.Replace(in)
++}
+diff --git a/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn.go b/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn.go
+index 2b205667..38024cfa 100644
+--- a/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn.go
++++ b/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn.go
+@@ -252,7 +252,7 @@ func (s *CustomColumnsPrinter) printOneObject(obj runtime.Object, parsers []*jso
+ 		}
+ 		for arrIx := range values {
+ 			for valIx := range values[arrIx] {
+-				valueStrings = append(valueStrings, fmt.Sprintf("%v", values[arrIx][valIx].Interface()))
++				valueStrings = append(valueStrings, printers.EscapeTerminal(fmt.Sprint(values[arrIx][valIx].Interface())))
+ 			}
+ 		}
+ 		columns[ix] = strings.Join(valueStrings, ",")
+diff --git a/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn_test.go b/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn_test.go
+index e4fb17a8..de403142 100644
+--- a/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn_test.go
++++ b/staging/src/k8s.io/kubectl/pkg/cmd/get/customcolumn_test.go
+@@ -311,6 +311,22 @@ foo    baz
+ 			obj: &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}, TypeMeta: metav1.TypeMeta{APIVersion: "baz"}},
+ 			expectedOutput: `NAME   API_VERSION   NOT_FOUND
+ foo    baz           <none>
++`,
++		},
++		{
++			columns: []Column{
++				{
++					Header:    "NAME",
++					FieldSpec: "{.metadata.name}",
++				},
++			},
++			obj: &corev1.PodList{
++				Items: []corev1.Pod{
++					{ObjectMeta: metav1.ObjectMeta{Name: "\x1b \r"}},
++				},
++			},
++			expectedOutput: `NAME
++^[ \r
+ `,
+ 		},
+ 	}
+diff --git a/staging/src/k8s.io/kubectl/pkg/describe/describe.go b/staging/src/k8s.io/kubectl/pkg/describe/describe.go
+index 484ed09f..d3b65132 100644
+--- a/staging/src/k8s.io/kubectl/pkg/describe/describe.go
++++ b/staging/src/k8s.io/kubectl/pkg/describe/describe.go
+@@ -65,6 +65,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/intstr"
+ 	"k8s.io/apimachinery/pkg/util/sets"
+ 	"k8s.io/cli-runtime/pkg/genericclioptions"
++	"k8s.io/cli-runtime/pkg/printers"
+ 	runtimeresource "k8s.io/cli-runtime/pkg/resource"
+ 	"k8s.io/client-go/dynamic"
+ 	clientset "k8s.io/client-go/kubernetes"
+@@ -148,11 +149,13 @@ func (pw *prefixWriter) Write(level int, format string, a ...interface{}) {
+ 	for i := 0; i < level; i++ {
+ 		prefix += levelSpace
+ 	}
+-	fmt.Fprintf(pw.out, prefix+format, a...)
++	output := fmt.Sprintf(prefix+format, a...)
++	printers.WriteEscaped(pw.out, output)
+ }
+ 
+ func (pw *prefixWriter) WriteLine(a ...interface{}) {
+-	fmt.Fprintln(pw.out, a...)
++	output := fmt.Sprintln(a...)
++	printers.WriteEscaped(pw.out, output)
+ }
+ 
+ func (pw *prefixWriter) Flush() {
+diff --git a/staging/src/k8s.io/kubectl/pkg/describe/describe_test.go b/staging/src/k8s.io/kubectl/pkg/describe/describe_test.go
+index 5225ec2d..a3e2feba 100644
+--- a/staging/src/k8s.io/kubectl/pkg/describe/describe_test.go
++++ b/staging/src/k8s.io/kubectl/pkg/describe/describe_test.go
+@@ -5520,3 +5520,22 @@ func TestControllerRef(t *testing.T) {
+ 		t.Errorf("unexpected out: %s", out)
+ 	}
+ }
++
++func TestDescribeTerminalEscape(t *testing.T) {
++	fake := fake.NewSimpleClientset(&corev1.ConfigMap{
++		ObjectMeta: metav1.ObjectMeta{
++			Name:        "mycm",
++			Namespace:   "foo",
++			Annotations: map[string]string{"annotation1": "terminal escape: \x1b"},
++		},
++	})
++	c := &describeClient{T: t, Namespace: "foo", Interface: fake}
++	d := ConfigMapDescriber{c}
++	out, err := d.Describe("foo", "mycm", DescriberSettings{ShowEvents: true})
++	if err != nil {
++		t.Errorf("unexpected error: %v", err)
++	}
++	if strings.Contains(out, "\x1b") || !strings.Contains(out, "^[") {
++		t.Errorf("unexpected out: %s", out)
++	}
++}
+-- 
+2.25.1
+

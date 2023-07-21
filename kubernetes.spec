@@ -2,12 +2,12 @@
 %global _buildshell  /bin/bash
 
 Name:         kubernetes
-Version:      1.24.0
-Release:      5
+Version:      1.25.3
+Release:      1
 Summary:      Container cluster management
 License:      ASL 2.0
 URL:          https://k8s.io/kubernetes
-Source0:      https://github.com/kubernetes/kubernetes/archive/v1.24.0.tar.gz
+Source0:      https://github.com/kubernetes/kubernetes/archive/v1.25.3.tar.gz
 Source1:      kube-proxy.service
 Source2:      kube-apiserver.service
 Source3:      kube-scheduler.service
@@ -26,13 +26,11 @@ Source15:     kubernetes.conf
 
 Patch0001: 0001-fix-compile-options.patch
 Patch0002: 0002-kubelet-support-exec-and-attach-websocket-protocol.patch
-Patch0003: 0003-timeout-wait-backend-to-frontend-complete.patch
-Patch0004: 0004-Add-an-option-for-aggregator.patch
-Patch0005: 0005-Escape-terminal-special-characters-in-kubectl-112553.patch
-Patch0006: 0006-Return-error-for-localhost-seccomp-type-with-no-loca.patch
-Patch0007: 0007-Validate-etcd-paths.patch
-Patch0008: 0008-fix-node-address-validation.patch
-Patch0009: 0009-Add-ephemeralcontainer-to-imagepolicy-securityaccoun.patch
+Patch0003: 0003-Escape-terminal-special-characters-in-kubectl-112553.patch
+Patch0004: 0004-Return-error-for-localhost-seccomp-type-with-no-loca.patch
+Patch0005: 0005-Validate-etcd-paths.patch
+Patch0006: 0006-fix-node-address-validation.patch
+Patch0007: 0007-Add-ephemeralcontainer-to-imagepolicy-securityaccoun.patch
 
 %description
 Container cluster management.
@@ -264,6 +262,12 @@ getent passwd kube >/dev/null || useradd -r -g kube -d / -s /sbin/nologin \
 %systemd_postun kubelet kube-proxy
 
 %changelog
+* Fri Jul 21 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.25.3-1
+- Type:update
+- CVE:NA
+- SUG:NA
+- DESC:update to 1.25.3
+
 * Tue Jul 04 2023 zhangxiaoyu <zhangxiaoyu58@huawei.com> - 1.24.0-5
 - Type:bugfix
 - CVE:NA

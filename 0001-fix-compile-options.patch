@@ -1,7 +1,7 @@
-From 6f69a95a25dc6fb1b3d0e024cb28f5c83022dc58 Mon Sep 17 00:00:00 2001
+From d49390e67b2d3027c8c0ad799bf294a89d4d149f Mon Sep 17 00:00:00 2001
 From: zhangxiaoyu <zhangxiaoyu58@huawei.com>
-Date: Tue, 3 Jan 2023 14:19:44 +0800
-Subject: fix compile options
+Date: Thu, 20 Jul 2023 17:27:05 +0800
+Subject: [PATCH] fix compile options
 
 Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
 ---
@@ -9,10 +9,10 @@ Signed-off-by: zhangxiaoyu <zhangxiaoyu58@huawei.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/hack/lib/golang.sh b/hack/lib/golang.sh
-index 2865da28..ed64483e 100755
+index 232c17b3..c6cbce44 100755
 --- a/hack/lib/golang.sh
 +++ b/hack/lib/golang.sh
-@@ -709,6 +709,7 @@ kube::golang::build_binaries_for_platform() {
+@@ -744,6 +744,7 @@ kube::golang::build_binaries_for_platform() {
        -installsuffix=static
        ${goflags:+"${goflags[@]}"}
        -gcflags="${gogcflags}"
@@ -20,7 +20,7 @@ index 2865da28..ed64483e 100755
        -asmflags="${goasmflags}"
        -ldflags="${goldflags}"
        -tags="${gotags:-}"
-@@ -720,6 +721,7 @@ kube::golang::build_binaries_for_platform() {
+@@ -755,6 +756,7 @@ kube::golang::build_binaries_for_platform() {
      build_args=(
        ${goflags:+"${goflags[@]}"}
        -gcflags="${gogcflags}"
@@ -28,8 +28,8 @@ index 2865da28..ed64483e 100755
        -asmflags="${goasmflags}"
        -ldflags="${goldflags}"
        -tags="${gotags:-}"
-@@ -808,7 +810,7 @@ kube::golang::build_binaries() {
-         gogcflags="${gogcflags} -N -l"
+@@ -844,7 +846,7 @@ kube::golang::build_binaries() {
+         goasmflags=""
      fi
  
 -    goldflags="all=$(kube::version::ldflags) ${GOLDFLAGS:-}"
